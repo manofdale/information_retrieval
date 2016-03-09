@@ -1,25 +1,31 @@
 # tree.py, basic tree data structures for information retrieval tasks,
 # agp, 07/03/2016
+import logging
+
 
 class Tree(object):
     def __init__(self, *args, **kwargs):
         pass
 
-    def __getitem__(self, item):
+    def __getitem__(self, key):
         pass
 
     def __setitem__(self, key, value):
         pass
 
-    def remove(self, key):
+    def remove(self, key, item=None):
         pass
+
+
+def search(tree, key):
+    return tree.__getitem__(key)
 
 
 class Trie(Tree):
     def __init__(self, key, item, *args, **kwargs):
-        """ inefficiently store a set of items for a given key and efficiently reTrieve them
+        """ inefficiently store items for a given key and efficiently reTrieve them
 
-        :param key: hashable
+        :param key: iterable of hashables
         :param item: hashable
         """
         super(Trie, self).__init__(*args, **kwargs)
@@ -31,38 +37,74 @@ class Trie(Tree):
             else:
                 self.items.add(item)
 
-    def __getitem__(self, key):
-        """given a string key, return either None or the item found"""
-        if key is None:
-            return None
-        if len(key) == 0:
-            return self.items
-        elif key[0] in self.children:
-            node = self.children[key[0]]
-            return node[key[1:]]
-        return None
+    def _find_node(self, key):
+        """ search for a key in the trie
 
-    def remove(self, key, item):
-        """try to remove the item from the trie"""
+        :param key: an iterable of hashables
+        :return: the trie node that is found using the key or None
+        """
         if key is None:
+            return None, None
+        if len(key) == 0:
+            return self, None
+        node = self
+        for k in key:
+            parent = node
+            if parent.children is None:
+                return None, parent
+            if k in parent.children:
+                node = parent.children[k]
+            else:
+                return None, parent
+        return node, parent
+
+    def __getitem__(self, key):
+        """given an iterable key, return either None or the item found
+
+        :param key: an iterable having hashable elements
+        :return: the list of items found or None
+        """
+        node, _ = self._find_node(key)
+        if node is None:
             return None
-        elif len(key) == 0:
-            if len(self.items) == 0:
-                return None
-            if item in self.items:
-                return self.items.remove(item)
+        return node.items
+
+    def remove(self, key, item=None):
+        """try to remove the item from the trie
+
+        :param key: find the position of the items
+        :param item: to be deleted, if None delete all items
+        """
+        node, parent = self._find_node(key)
+        if node is None:
+            logging.warning("the key to be deleted: %s does not exist" % str(key))
         else:
-            if self.children is None or self.children == {}:
-                return None
-            if key[0] in self.children:
-                node = self.children[key[0]]
-                return node.remove(key[1:], item)
+            clean_up = False
+            if item is None:
+                clean_up = True
+            elif item in node.items:  # just delete the item
+                if len(node.items) > 1:
+                    node.items.remove(item)  # remove a specific item
+                else:
+                    clean_up = True
+            else:
+                    logging.warning("item to be deleted: %s does not exist" % str(item))
+            if clean_up:  # clean up as much as possible
+                if parent is None or (node.children is not None and node.children != {}):  # don't touch the children
+                    node.items = set()
+                else:
+                    parent.children.pop(key[-1])  # delete the leaf node
+
 
     def __setitem__(self, key, item):
-        """given a string key, store a hashable item in the trie"""
+        """given an iterable key, store an item in the trie
+
+        :param key: an iterable having hashable elements
+        :param item: a hashable item
+        """
         if key is None:
-            return
-        if len(key) == 0:
+            logging.warning("ignoring the (None, %s) pair" % str(item))
+        elif len(key) == 0:
             self.items.add(item)
             return
         if self.children is None:
@@ -72,4 +114,96 @@ class Trie(Tree):
         else:
             node = self.children[key[0]]
             node[key[1:]] = item
-        return
+
+
+class Bst(Tree):
+    def __init__(self, key, item, *args, **kwargs):
+        super(Bst, self).__init__(*args, **kwargs)
+        self.key = key
+        self.items = set()
+        self.left = None
+        self.right = None
+        if key is not None:
+            self.items.add(item)
+
+    def _find_node(self, key):
+        if key is None:
+            return None, None, 0
+        parent = None
+        node = self
+        while node is not None:
+            if node.key == key:
+                return node, parent, 0  # bingo
+            parent = node
+            if node.key > key:
+                if node.left is None:
+                    return node, parent, -1  # left
+                node = node.left
+            else:
+                if node.right is None:
+                    return node, parent, 1  # right
+                node = node.right
+        assert False  # not supposed to reach here
+
+    def __getitem__(self, key):
+        node, _, p = self._find_node(key)
+        if node is None or p != 0:
+            logging.warning("key %s not found" % str(key))
+            return None
+        return node.items  # bingo
+
+    def __setitem__(self, key, value):
+        node, _, p = self._find_node(key)
+        if node is None:
+            logging.warning("can not set %s to key %s" % (str(value), str(key)))
+        elif p < 0:  # left
+            node.left = Bst(key, value)
+        elif p > 0:  # right
+            node.right = Bst(key, value)
+        else:  # there is already a node with the key
+            node.items.add(value)
+
+    def remove(self, key, item=None):
+        """try to remove the item from the trie
+
+        :param key: find the position of the items
+        :param item: to be deleted, if None delete all items
+        """
+        node, parent, p = self._find_node(key)
+        if node is None or p != 0:
+            logging.warning("the key to be deleted: %s does not exist" % str(key))
+        else:
+            if item is None:
+                clean_up = True
+            elif item in node.items:  # just delete the item
+                if len(node.items) > 1:
+                    node.items.remove(item)  # remove a specific item
+                else:
+                    clean_up = True
+            if clean_up:  # clean up as much as possible
+                if parent is None or (node.children is not None and node.children != {}):  # don't touch the children
+                    node.items = set()
+                else:
+                    parent.children.pop(key[-1])  # delete the leaf node
+            else:
+                logging.warning("item to be deleted: %s does not exist" % str(item))
+
+    def remove2(self, key, item=None):
+        node, parent, p = self._find_node(key)
+        if item is None:
+            if parent is None:
+                node.items = set()
+            else:
+                pass  # if parent.key>
+        if node is None or p != 0:
+            logging.warning("key %s not found" % str(key))
+            return
+        if item == None:
+            pass
+        else:
+            node.items.remove(item)
+
+
+class Avl(Bst):
+    def __init__(self, *args, **kwargs):
+        pass

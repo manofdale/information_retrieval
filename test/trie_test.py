@@ -21,6 +21,7 @@ class TestTrie(unittest.TestCase):
         self.assertEqual(t["abc"], set([None, 'abc']))
         self.assertEqual(t["ab"], set(['ab']))
         self.assertEqual(t["acd"], set(['acd', '6']))
+        self.assertEqual(t["a"], set())
 
     def test_remove_item(self):
         t = Trie("abc", "1")
@@ -28,14 +29,22 @@ class TestTrie(unittest.TestCase):
         t["a"] = "a"
         t["b"] = "b"
         t["b"] = "c"
-        t.remove("a","a")
-        self.assertEqual(t["a"], set([]))
-        t.remove("b","c")
+        t.remove("a", "a")
+        self.assertEqual(t["a"], set())
+        self.assertEqual(t["ab"], set())
+        self.assertEqual(t["b"], set(["b", "c"]))
+        t.remove("b", "c")
         self.assertEqual(t["b"], set(["b"]))
-        t.remove("abc","2")
+        t.remove("abc", "2")
         self.assertEqual(t["abc"], set(["1"]))
-        t.remove("abc","1")
-        self.assertEqual(t["abc"], set([]))
+        t.remove("abc", "1")
+        self.assertEqual(t["abc"], None)
+        t["abc"] = "1"
+        t["abc"] = "2"
+        self.assertEqual(t["abc"], set(["1", "2"]))
+        t.remove("abc")
+        self.assertEqual(t["abc"], None)
+        self.assertEqual(t["ab"], set())
 
 
 if __name__ == '__main__':
