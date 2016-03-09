@@ -39,12 +39,14 @@ class TestTrie(unittest.TestCase):
         self.assertEqual(t["abc"], set(["1"]))
         t.remove("abc", "1")
         self.assertEqual(t["abc"], None)
+        t["abcd"] = "okidoki"
         t["abc"] = "1"
         t["abc"] = "2"
         self.assertEqual(t["abc"], set(["1", "2"]))
         t.remove("abc")
-        self.assertEqual(t["abc"], None)
+        self.assertEqual(t["abc"], set())
         self.assertEqual(t["ab"], set())
+        self.assertEqual(t["abcd"], set(["okidoki"]))
 
 
 if __name__ == '__main__':

@@ -1,6 +1,8 @@
 # tree.py, basic tree data structures for information retrieval tasks,
 # agp, 07/03/2016
 import logging
+import copy
+import random
 
 
 class Tree(object):
@@ -23,7 +25,7 @@ def search(tree, key):
 
 class Trie(Tree):
     def __init__(self, key, item, *args, **kwargs):
-        """ inefficiently store items for a given key and efficiently reTrieve them
+        """ inefficiently store items and efficiently reTrieve them
 
         :param key: iterable of hashables
         :param item: hashable
@@ -88,13 +90,12 @@ class Trie(Tree):
                 else:
                     clean_up = True
             else:
-                    logging.warning("item to be deleted: %s does not exist" % str(item))
+                logging.warning("item to be deleted: %s does not exist" % str(item))
             if clean_up:  # clean up as much as possible
                 if parent is None or (node.children is not None and node.children != {}):  # don't touch the children
                     node.items = set()
                 else:
                     parent.children.pop(key[-1])  # delete the leaf node
-
 
     def __setitem__(self, key, item):
         """given an iterable key, store an item in the trie
@@ -118,6 +119,11 @@ class Trie(Tree):
 
 class Bst(Tree):
     def __init__(self, key, item, *args, **kwargs):
+        """ efficiently store items and retrieve them slower (log n)
+
+        :param key: iterable of hashables
+        :param item: hashable
+        """
         super(Bst, self).__init__(*args, **kwargs)
         self.key = key
         self.items = set()
@@ -163,6 +169,57 @@ class Bst(Tree):
         else:  # there is already a node with the key
             node.items.add(value)
 
+    def _append(self, node):
+        parent, _, p = self._find_node(node.key)
+        if p < 0:
+            parent.left = node
+        elif p > 0:
+            parent.right = node
+        else:
+            logging.error("append mode does not support  duplicate keys")
+            raise Exception
+
+    def _delete_node(self, parent, node):
+        if parent is not None:
+            if parent.key > node.key:
+                to_left = True
+            else:
+                to_left = False
+            if node.left is None:
+                if to_left:
+                    parent.left = node.right
+                else:
+                    parent.right = node.right
+            elif node.right is None:
+                if to_left:
+                    parent.left = node.left
+                else:
+                    parent.right = node.left
+            else:
+                pass # TODO implement this
+        else:  # node is self
+            if self.left is None:
+                self.items = self.right.items
+                self.key = self.right.key
+                self._delete_node(node, node.right)
+            elif self.right is None:
+                self.items = self.left.items
+                self.key = self.left.key
+                self._delete_node(node, node.left)
+            else:  # randomly pick a side for the new root, TODO is swapping all the way better than this?
+                if random.random() < 0.5:
+                    copy_node = copy.deepcopy(self.left)
+                    move_node = self.right
+                else:
+                    copy_node = copy.deepcopy(self.right)
+                    move_node = self.left
+                self.items = move_node.items
+                self.key = move_node.key
+                self.left = move_node.left
+                self.right = move_node.right
+                self._append(copy_node)
+
+
     def remove(self, key, item=None):
         """try to remove the item from the trie
 
@@ -173,6 +230,7 @@ class Bst(Tree):
         if node is None or p != 0:
             logging.warning("the key to be deleted: %s does not exist" % str(key))
         else:
+            clean_up = False
             if item is None:
                 clean_up = True
             elif item in node.items:  # just delete the item
@@ -180,13 +238,10 @@ class Bst(Tree):
                     node.items.remove(item)  # remove a specific item
                 else:
                     clean_up = True
-            if clean_up:  # clean up as much as possible
-                if parent is None or (node.children is not None and node.children != {}):  # don't touch the children
-                    node.items = set()
-                else:
-                    parent.children.pop(key[-1])  # delete the leaf node
             else:
                 logging.warning("item to be deleted: %s does not exist" % str(item))
+            if clean_up:  # clean up as much as possible
+                self._delete_node(parent, node)
 
     def remove2(self, key, item=None):
         node, parent, p = self._find_node(key)
@@ -206,4 +261,4 @@ class Bst(Tree):
 
 class Avl(Bst):
     def __init__(self, *args, **kwargs):
-        pass
+        pass  # TODO balanced search tree
