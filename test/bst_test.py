@@ -26,22 +26,36 @@ class TestBst(unittest.TestCase):
         self.assertEqual(t["aaa"], set(['aaa']))
         self.assertEqual(t["bcd"], set(['bcd', '6']))
 
-    @unittest.skip("skip this for now")
+    # @unittest.skip("naa")
     def test_remove_item(self):
         t = Bst("abc", "1")
         t["abd"] = "abd"
         t["a"] = "a"
         t["b"] = "b"
         t["b"] = "c"
+        print("initial tree")
+        t.print_nodes()
+        print("begin deleting items")
         t.remove("a", "a")
-        self.assertEqual(t["a"], set())
+        self.assertEqual(t["a"], None)
         self.assertEqual(t["b"], set(["b", "c"]))
+        self.assertEqual(t["abd"], set(["abd"]))
         t.remove("b", "c")
         self.assertEqual(t["b"], set(["b"]))
+        t.remove("abd", "abd")
+        self.assertEqual(t["abd"], None)
         t.remove("abc", "2")
         self.assertEqual(t["abc"], set(["1"]))
-        t.remove("abc", "1")
-        self.assertEqual(t["abc"], set([]))
+        print("modified tree")
+        t.print_nodes()
+        #t.remove("b", "b")
+        #self.assertEqual(t["b"], None)
+        t.remove("23k")
+        self.assertEqual(t["abc"], set(["1"]))
+        self.assertEqual(t["b"], set(["b"]))
+        #t.remove("abc")
+        #self.assertEqual(t["abc"], None)
+        #self.assertEqual(t["b"], set(["b"]))
 
 
 if __name__ == '__main__':

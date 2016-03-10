@@ -179,46 +179,45 @@ class Bst(Tree):
             logging.error("append mode does not support  duplicate keys")
             raise Exception
 
-    def _delete_node(self, parent, node):
-        if parent is not None:
-            if parent.key > node.key:
-                to_left = True
-            else:
-                to_left = False
-            if node.left is None:
-                if to_left:
-                    parent.left = node.right
-                else:
-                    parent.right = node.right
-            elif node.right is None:
-                if to_left:
-                    parent.left = node.left
-                else:
-                    parent.right = node.left
-            else:
-                pass # TODO implement this
-        else:  # node is self
-            if self.left is None:
-                self.items = self.right.items
-                self.key = self.right.key
-                self._delete_node(node, node.right)
-            elif self.right is None:
-                self.items = self.left.items
-                self.key = self.left.key
-                self._delete_node(node, node.left)
-            else:  # randomly pick a side for the new root, TODO is swapping all the way better than this?
-                if random.random() < 0.5:
-                    copy_node = copy.deepcopy(self.left)
-                    move_node = self.right
-                else:
-                    copy_node = copy.deepcopy(self.right)
-                    move_node = self.left
-                self.items = move_node.items
-                self.key = move_node.key
-                self.left = move_node.left
-                self.right = move_node.right
-                self._append(copy_node)
+    def swap_data(self, move_node):
+        items = self.items
+        key = self.key
+        self.items = move_node.items
+        self.key = move_node.key
+        move_node.key = key
+        move_node.items = items
 
+    def _del_node(self, parent, node):
+        key = node.key
+        print(node.key)
+        if node.left is None and node.right is None:  # leaf node
+            node.items = set()
+            node.key = None
+            node = None
+        elif node.left is None:
+            node = node.right
+        elif node.right is None:
+            node = node.left
+        elif random.random() < 0.5:  # pick a child to swap/del
+            node.key = node.left.key - 1  # since it will be discarded anyway
+            node.swap_data(node.left)
+            self._del_node(node, node.left)
+        else:
+            node.key = node.right.key + 1
+            node.swap_data(node.right)
+            self._del_node(node, node.right)
+        if parent is not None:
+            if parent.key > key:
+                parent.left = node
+            else:
+                parent.right = node
+
+    def print_nodes(self):
+        if self.left is not None:
+            self.left.print_nodes()
+        print(self.key, self.items)
+        if self.right is not None:
+            self.right.print_nodes()
 
     def remove(self, key, item=None):
         """try to remove the item from the trie
@@ -241,22 +240,7 @@ class Bst(Tree):
             else:
                 logging.warning("item to be deleted: %s does not exist" % str(item))
             if clean_up:  # clean up as much as possible
-                self._delete_node(parent, node)
-
-    def remove2(self, key, item=None):
-        node, parent, p = self._find_node(key)
-        if item is None:
-            if parent is None:
-                node.items = set()
-            else:
-                pass  # if parent.key>
-        if node is None or p != 0:
-            logging.warning("key %s not found" % str(key))
-            return
-        if item == None:
-            pass
-        else:
-            node.items.remove(item)
+                self._del_node(parent, node)
 
 
 class Avl(Bst):
